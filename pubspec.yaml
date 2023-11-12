@@ -42,6 +42,8 @@ dependencies:
   web_socket_channel: ^2.4.0
   flutter_tts: ^3.8.3
   speech_to_text: ^6.4.0
+  get: ^4.6.6
+  flutter_spinkit: ^5.2.0
 
 dev_dependencies:
   flutter_test:

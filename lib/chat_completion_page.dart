@@ -5,11 +5,16 @@ import 'package:ai_chat/models/message_model.dart';
 import 'package:ai_chat/ripple_effect.dart';
 import 'package:chat_gpt_flutter/chat_gpt_flutter.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:get/get.dart';
+import 'package:get/instance_manager.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:http/http.dart' as http;
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'controller/controller.dart';
 import 'elevanlabs.dart';
+import 'message_with_stream.dart';
 import 'models/question_answer.dart';
 
 class ChatCompletionPage extends StatefulWidget {
@@ -22,13 +27,14 @@ class ChatCompletionPage extends StatefulWidget {
 }
 
 class _ChatCompletionPageState extends State<ChatCompletionPage> {
-  void _initSpeech() async {
+  Future<void> _initSpeech() async {
     _speechEnabled = await _speechToText.initialize();
-    //_startListening();
+    await _startListening();
 
     setState(() {});
   }
 
+  Controller controller = Get.put(Controller());
   String _lastWords = '';
   final SpeechToText _speechToText = SpeechToText();
   bool _speechEnabled = false;
@@ -42,25 +48,17 @@ class _ChatCompletionPageState extends State<ChatCompletionPage> {
   final testPrompt =
       'Which Disney character famously leaves a glass slipper behind at a royal ball?';
 
-  final List<MessageModel> messageList = [
-    MessageModel(
-        text:
-            "You are a German teacher and you will only teach German. You will speak in Turkish. If he asks any other questions, you will say that I cannot help. Also, after every answer, you will say Laga luga yapma sor",
-        isMe: true,
-        isPrompt: false)
-  ];
+  final List<MessageModel> messageList = [];
 
   late TextEditingController textEditingController;
   bool haveVoiceError = false;
-  StreamSubscription<CompletionResponse>? streamSubscription;
-  StreamSubscription<StreamCompletionResponse>? chatStreamSubscription;
 
   @override
   void dispose() {
     _textFieldController.dispose();
     player.dispose();
     textEditingController.dispose();
-    chatStreamSubscription?.cancel();
+    controller.chatStreamSubscription?.cancel();
     super.dispose();
   }
 
@@ -71,7 +69,7 @@ class _ChatCompletionPageState extends State<ChatCompletionPage> {
       print("müzik çalıyor");
       await player.setAudioSource(MyCustomSource(
           bytes)); //send the bytes to be read from the JustAudio library
-      showIcon = true;
+      controller.showIcon.value = true;
       setState(() {});
       await player.play().whenComplete(() {
         print("ÇALAN MÜZİK BİTTİ");
@@ -123,7 +121,7 @@ class _ChatCompletionPageState extends State<ChatCompletionPage> {
     String voicePatrick = "ODq5zmih8GrVes37Dizd";
     String voiceMimi = "zrHiDhphv9ZnVXBqCLjz";
     String ethan = "g5CIjZEefAph4nQFvHAz";
-    String url = 'https://api.elevenlabs.io/v1/text-to-speech/$voiceMimi';
+    String url = 'https://api.elevenlabs.io/v1/text-to-speech/$voicePatrick';
     final response = await http.post(
       Uri.parse(url),
       headers: {
@@ -147,13 +145,25 @@ class _ChatCompletionPageState extends State<ChatCompletionPage> {
       byteList[index] = bytes;
     } else {
       print("APİ HATASI ${response.statusCode}");
-      haveVoiceError = true;
+      print("İndex şu an ${index}");
+      print("listede eleman sayısı şu an ${byteList.length}");
+      /*  haveVoiceError = true;
+      musicStarted = 0;
+      streamBittiMi = false;
+      isMusicPlaying = false;
+      controller.showIcon.value = false;
+      soundSayac = 0;
+      haveVoiceError = false;
+      apiSayac = 0;
+      byteList.clear();
+      cumleList.clear();
+      _startListening();*/
       // throw Exception('Failed to load audio');
       return;
     }
   } //
 
-  void _startListening() async {
+  Future<void> _startListening() async {
     print("dinleyecem");
     try {
       await _speechToText.listen(
@@ -161,7 +171,7 @@ class _ChatCompletionPageState extends State<ChatCompletionPage> {
         onResult: (result) async {
           await _onSpeechResult(result);
         },
-        pauseFor: const Duration(seconds: 5),
+        pauseFor: const Duration(seconds: 3),
       );
     } catch (e) {
       print(e);
@@ -171,12 +181,14 @@ class _ChatCompletionPageState extends State<ChatCompletionPage> {
 
   void _stopListening() async {
     await _speechToText.stop();
+
     setState(() {});
   }
 
   Future<void> _onSpeechResult(SpeechRecognitionResult result) async {
     if (result.finalResult) {
       // Stop listening
+      print("dinleme bitti");
       _stopListening();
       textEditingController.text = result.recognizedWords;
       print("şu kelimeleri tespit ettim");
@@ -213,52 +225,52 @@ class _ChatCompletionPageState extends State<ChatCompletionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-        floatingActionButton: showIcon
-            ? const SizedBox()
-            : FloatingActionButton(
-                onPressed:
-                    // If not yet listening for speech start, otherwise stop
-                    _speechToText.isNotListening
-                        ? _startListening
-                        : _stopListening,
-                tooltip: 'Listen',
-                child: loading
-                    ? const CircularProgressIndicator()
-                    : Icon(_speechToText.isNotListening
-                        ? Icons.mic_off
-                        : Icons.mic),
-              ),
+        floatingActionButton: InkWell(
+            onTap:
+                // If not yet listening for speech start, otherwise stop
+                //speechToText.isNotListening ? _startListening :
+                _stopListening,
+            child: _speechToText.isListening
+                ? Icon(
+                    Icons.mic,
+                    color: Colors.white,
+                    size: 64,
+                  )
+                : SizedBox()),
         backgroundColor: Colors.black,
         body: SafeArea(
-          child: Center(
-            child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: showIcon
-                    ? const TalkingAnimation(
-                        color: Colors.deepOrange,
-                      )
-                    : const SizedBox()),
-          ),
+          child: _speechToText.isListening
+              ? const SpinKitFoldingCube(
+                  color: Colors.white,
+                  size: 50.0,
+                )
+              : Center(child: MessageWithStream()),
         ));
   }
 
   _sendChatMessage() async {
-    const prompt =
-        "You will speak in Turkish.Your name is huysuz. Also, after every answer, you will say I love you very much";
+    const prompt = "You will speak in Turkish.Your name is huysuz.";
     setState(() {
-      textEditingController.clear();
+      //textEditingController.clear();
       loading = true;
     });
     final testRequest = ChatCompletionRequest(
-      stream: true,
-      maxTokens: 300,
-      messages: messageList
+        maxTokens: 1000,
+        stream: true,
+        messages: [Message(role: Role.user.name, content: prompt)] +
+            messageList
+                .map((e) => Message(
+                    role: e.isMe ? Role.user.name : Role.assistant.name,
+                    content: e.text))
+                .toList(),
+        model: ChatGptModel
+            .gpt35Turbo /* messageList
           .map((e) => Message(
               role: e.isMe ? Role.user.name : Role.assistant.name,
               content: e.text))
           .toList(),
-      model: ChatGptModel.gpt35Turbo0301,
-    );
+      */
+        );
     await _chatStreamResponse(testRequest);
   }
 
@@ -266,17 +278,18 @@ class _ChatCompletionPageState extends State<ChatCompletionPage> {
   bool streamBittiMi = false;
   bool isMusicPlaying = false;
   String gbtAnswer = "";
+
   _chatStreamResponse(ChatCompletionRequest request) async {
-    chatStreamSubscription?.cancel();
+    controller.chatStreamSubscription?.cancel();
     String currentCumle = "";
 
     try {
       final stream = await widget.chatGpt.createChatCompletionStream(request);
-      chatStreamSubscription = stream?.listen((event) => setState(
+      controller.chatStreamSubscription = stream?.listen((event) => setState(
             () {
               if (event.streamMessageEnd) {
                 streamBittiMi = true;
-                chatStreamSubscription?.cancel();
+                controller.chatStreamSubscription?.cancel();
               } else {
                 currentCumle += event.choices?.first.delta?.content ?? "";
                 if (currentCumle.endsWith(".") ||
@@ -307,12 +320,12 @@ class _ChatCompletionPageState extends State<ChatCompletionPage> {
         gbtAnswer = "";
       });
       log("Error occurred: $error");
+      _startListening();
     }
   }
 
   int soundSayac = 0;
   int apiSayac = 0;
-  bool showIcon = false;
   startPlaying() async {
     while (true) {
       if (haveVoiceError) {
@@ -321,12 +334,13 @@ class _ChatCompletionPageState extends State<ChatCompletionPage> {
         musicStarted = 0;
         streamBittiMi = false;
         isMusicPlaying = false;
-        showIcon = false;
+        controller.showIcon.value = false;
         soundSayac = 0;
         haveVoiceError = false;
         apiSayac = 0;
         byteList.clear();
         cumleList.clear();
+        _startListening();
         break;
       }
       if (streamBittiMi) {
@@ -341,13 +355,13 @@ class _ChatCompletionPageState extends State<ChatCompletionPage> {
           musicStarted = 0;
           streamBittiMi = false;
           isMusicPlaying = false;
-          showIcon = false;
+          controller.showIcon.value = false;
           soundSayac = 0;
           apiSayac = 0;
           byteList.clear();
           cumleList.clear();
-          if (messageList.length > 6) {
-            messageList.removeAt(1);
+          if (messageList.length > 3) {
+            messageList.removeAt(0);
           }
           messageList
               .add(MessageModel(text: gbtAnswer, isMe: false, isPrompt: true));
@@ -359,7 +373,7 @@ class _ChatCompletionPageState extends State<ChatCompletionPage> {
           }
           gbtAnswer = "";
 
-          //  _speechToText.isNotListening ? _startListening() : null;
+          _speechToText.isNotListening ? _startListening() : null;
 
           break;
         }
@@ -387,7 +401,7 @@ class _ChatCompletionPageState extends State<ChatCompletionPage> {
           await playSound(byteList[soundSayac]);
         } else {
           print(4);
-
+          print("sayaç $soundSayac");
           await Future.delayed(const Duration(milliseconds: 200));
         }
       } catch (e) {
