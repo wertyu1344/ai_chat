@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 class TalkingAnimation extends StatefulWidget {
-  const TalkingAnimation({Key? key}) : super(key: key);
+  final color;
+  const TalkingAnimation({required this.color, Key? key}) : super(key: key);
 
   @override
   _TalkingAnimationState createState() => _TalkingAnimationState();
@@ -220,6 +221,7 @@ class _TalkingAnimationState extends State<TalkingAnimation>
     return Center(
       child: CustomPaint(
         painter: MyPainter(
+          widget.color,
           firstRippleRadiusAnimation.value,
           firstRippleOpacityAnimation.value,
           firstRippleWidthAnimation.value,
@@ -247,8 +249,10 @@ class MyPainter extends CustomPainter {
   final double thirdRippleOpacity;
   final double thirdRippleStrokeWidth;
   final double centerCircleRadius;
+  final color;
 
   MyPainter(
+      this.color,
       this.firstRippleRadius,
       this.firstRippleOpacity,
       this.firstRippleStrokeWidth,
@@ -262,7 +266,7 @@ class MyPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    Color myColor = const Color(0xff653ff4);
+    Color myColor = color;
 
     Paint firstPaint = Paint();
     firstPaint.color = myColor.withOpacity(firstRippleOpacity);

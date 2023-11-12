@@ -4,9 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'chat_completion_page.dart';
-import 'completion_page.dart';
 
-const apiKey = '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';
+const apiKey = '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';
 
 Future<void> main() async {
   await dotenv.load(fileName: ".env");

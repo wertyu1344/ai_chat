@@ -8,8 +8,6 @@
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
 	<string>Ai Chat</string>
-	<key>NSMicrophoneUsageDescription</key>
-    <string>Mikrofon Erişimi</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -33,6 +31,8 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Mikrofon Erişimi</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Mikrofon erişim</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
